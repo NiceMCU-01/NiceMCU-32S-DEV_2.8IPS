@@ -1,0 +1,46 @@
+# PlatformIO build and dependency cache
+.pio/
+
+# Local agent tooling and private reference material
+.agents/
+参考文档/
+.local-backups/
+
+# Firmware/build products
+*.bin
+*.elf
+*.map
+*.hex
+*.uf2
+*.tmp
+*.o
+*.a
+
+# IDE and editor-local settings
+.vscode/
+.idea/
+.clangd/
+*.code-workspace
+
+# Logs and local operating-system files
+*.log
+logs/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Local configuration and credentials -- commit an explicitly named example file instead
+.env
+.env.*
+!.env.example
+secrets/
+credentials/
+*.pem
+*.key
+*.p12
+*.pfx
+wifi_config.h
+wifi_credentials.h
+secrets.h
