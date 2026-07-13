@@ -1,89 +1,74 @@
-# TFT Display Framework Project
+# NiceMCU 2.8 IPS Factory UI
 
-中文说明见 [README.md](./README.md)
+[中文说明](./README.md)
 
-This repository provides an ESP32 + LVGL display framework for the `NiceMCU-32S-DEV_2.8IPS` TFT development board with an `ST7789 240x320` display.
+An ESP32 + LVGL display framework and Factory UI example for the `NiceMCU-32S-DEV_2.8IPS` development board. The project is built with PlatformIO; its configuration is in `platformio.ini`.
 
-## Current Status
+## UI Preview
 
-- The `ST7789 240x320` and `CST816D` paths now use a NiceMCU-specific driver
-- The Factory UI and the new driver pass a clean build
-- Post-rewrite display, stripe, touch, and backlight checks pass on the target hardware
-- The active build environment is `nicemcu-32s-dev`, based on PlatformIO's standard `esp32dev` board
-- The verified display fix has been preserved in a reproducible local setup
+![Factory UI preview](./docs/images/factory-ui.png)
 
-## Project Positioning
+## Features
 
-This repository is currently positioned as a stable ESP32 TFT display framework and Factory UI skeleton.
+- Provides a Factory UI example built with LVGL
+- Includes Home, IO, WiFi, and SD page entries
+- Supports horizontal paging with page indicators
+- Includes ST7789 display and CST816D touch integration
 
-It is not primarily focused on continuing real feature integration for `IO / WiFi / SD`. Instead, the current priorities are:
+## Hardware and Software Stack
 
-- keeping the display and touch path stable
-- providing a maintainable page structure and theme layer
-- preserving a reusable UI skeleton for future content
+- Development board: NiceMCU-32S-DEV_2.8IPS
+- MCU: ESP32
+- Display: ST7789, 240 × 320
+- Touch controller: CST816D
+- GUI framework: LVGL 9.5.0
+- Development environment: PlatformIO with the Arduino framework
 
-In other words, this project should be treated as a factory-default UI / display-framework prototype rather than a full product firmware that is actively expanding feature logic.
+## Project Scope
 
-## Current UI Overview
+This project provides a working ESP32 TFT display framework and an extensible Factory UI prototype.
 
-The current `Factory UI` uses a three-part layout:
+Its current focus is the display and touch pipeline, page structure, and theme styling. The `IO / WiFi / SD` pages do not yet include complete application logic.
 
-- Top: a blue title bar showing `Factory UI`
-- Middle: a white rounded information card area with horizontal paging
+It can serve as a reference for a factory-default UI or display framework, and as a UI foundation for further feature development.
+
+## UI Overview
+
+The `Factory UI` uses a three-part layout:
+
+- Top: a blue title bar labeled `Factory UI`
+- Center: white rounded information cards with horizontal paging
 - Bottom: four fixed entry buttons for `Home / IO / WiFi / SD`
 
-Each bottom tab currently reuses the same horizontally paged card framework. Switching tabs resets to the first page of that tab, and page indicator dots show the active page position.
+All four entries reuse the same horizontally paged card framework. Switching entries returns to the first page, and dots at the bottom of each card indicate the active page.
 
-## Screen Data Notes
+## Notes and Limitations
 
-The values currently shown on the `Home / IO / WiFi / SD` pages are demo data or placeholder data.
-
-At this stage they are used to validate:
+The fields on the `Home / IO / WiFi / SD` pages currently contain demo or placeholder data. They are used to validate:
 
 - page layout
-- paging interaction
+- paging interactions
 - field density, truncation, and spacing
-- overall UI framework stability
+- overall display framework stability
 
-They do **not** reflect live runtime board state yet, and real board data has **not** been integrated into the UI. If needed later, those fields can be replaced with actual device status or test results on demand.
+They do **not** represent live hardware state, and real-time board data has **not** been integrated. Replace them with actual status or test results as needed.
 
-## Project Layout
+## Project Structure
 
-- `src/main.cpp`: application entry, LVGL tick, and UI startup
+- `src/main.cpp`: application entry, LVGL tick handling, and UI startup
 - `src/nicemcu_display.cpp`: ST7789, CST816D, LVGL display, and touch integration
 - `src/factory_ui.cpp`: Factory UI structure, paging logic, and tab switching
 - `include/factory_ui/`: UI headers for the app, styles, and theme layers
 - `include/nicemcu/`: NiceMCU driver API and target hardware parameters
 
-## Display Driver
+## Display and Touch Driver
 
-The repository contains a minimal display and touch driver independently implemented for the target hardware. Keeping it in-tree makes builds reproducible after clearing `.pio`, reinstalling dependencies, or moving to another development environment.
+The project provides a standalone minimal display and touch driver implementation for this board. It can be reproduced after clearing `.pio`, reinstalling dependencies, or moving to a different development environment.
 
 - Display and touch driver: `src/nicemcu_display.cpp`
 - Hardware configuration: `include/nicemcu/board_config.h`
-- UI framework: `lvgl/lvgl`, managed by PlatformIO
+- UI framework: PlatformIO-managed `lvgl/lvgl`
 
-External dependencies and their license terms are listed in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
+## License
 
-## Build
-
-```powershell
-pio run
-```
-
-## Upload
-
-```powershell
-pio run -t upload
-```
-
-## Serial Monitor
-
-```powershell
-pio device monitor
-```
-
-## Notes
-
-- The current firmware focuses on being a stable display framework, not a full feature-validation firmware
-- If new content needs to be shown later, the preferred path is to reuse the existing paged card framework instead of reshaping the whole UI architecture
+This project is licensed under the [MIT License](./LICENSE).
