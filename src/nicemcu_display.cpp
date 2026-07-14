@@ -30,6 +30,7 @@ esp_lcd_panel_handle_t g_panel = nullptr;
 lv_display_t* g_display = nullptr;
 lv_indev_t* g_touch = nullptr;
 void* g_draw_buffer = nullptr;
+TouchDebugInfo g_touch_debug;
 
 bool check(esp_err_t result, const char* operation) {
   if(result == ESP_OK) {
@@ -159,13 +160,36 @@ bool read_touch_packet(uint8_t* data, std::size_t length) {
 
 void read_touch(lv_indev_t*, lv_indev_data_t* data) {
   uint8_t packet[5] = {};
-  if(!read_touch_packet(packet, sizeof(packet)) || packet[0] == 0) {
+  const bool read_ok = read_touch_packet(packet, sizeof(packet));
+  if(!read_ok) {
+    if(g_touch_debug.read_ok) {
+      Serial.println("[touch] I2C read failed");
+    }
+    g_touch_debug.read_ok = false;
+    g_touch_debug.pressed = false;
+    data->state = LV_INDEV_STATE_RELEASED;
+    return;
+  }
+
+  g_touch_debug.read_ok = true;
+  if(packet[0] == 0) {
+    if(g_touch_debug.pressed) {
+      Serial.printf("[touch] UP raw=(%u,%u)\n", g_touch_debug.raw_x,
+                    g_touch_debug.raw_y);
+    }
+    g_touch_debug.pressed = false;
     data->state = LV_INDEV_STATE_RELEASED;
     return;
   }
 
   const uint16_t x = static_cast<uint16_t>(((packet[1] & 0x0F) << 8) | packet[2]);
   const uint16_t y = static_cast<uint16_t>(((packet[3] & 0x0F) << 8) | packet[4]);
+  if(!g_touch_debug.pressed) {
+    Serial.printf("[touch] DOWN raw=(%u,%u)\n", x, y);
+  }
+  g_touch_debug.raw_x = x;
+  g_touch_debug.raw_y = y;
+  g_touch_debug.pressed = true;
   data->point.x = std::min<uint16_t>(x, board::kDisplayWidth - 1);
   data->point.y = std::min<uint16_t>(y, board::kDisplayHeight - 1);
   data->state = LV_INDEV_STATE_PRESSED;
@@ -195,6 +219,10 @@ void set_backlight(float level) {
   const float clamped = std::max(0.0f, std::min(1.0f, level));
   const uint32_t duty = static_cast<uint32_t>(clamped * kBacklightMaximum + 0.5f);
   ledcWrite(kBacklightChannel, duty);
+}
+
+TouchDebugInfo get_touch_debug_info() {
+  return g_touch_debug;
 }
 
 bool init() {

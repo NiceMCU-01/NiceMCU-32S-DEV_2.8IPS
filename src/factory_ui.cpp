@@ -1,6 +1,7 @@
 #include "factory_ui/app.h"
 
 #include <cstddef>
+#include <cstdio>
 #include <cstdint>
 #include <lvgl.h>
 
@@ -146,14 +147,37 @@ constexpr TabDescriptor kTabs[] = {
 constexpr size_t kTabCount = sizeof(kTabs) / sizeof(kTabs[0]);
 constexpr size_t kMaxIndicatorDots = 4;
 
+struct TouchZone {
+  FactoryPage page;
+  lv_coord_t x;
+  lv_coord_t y;
+  lv_coord_t width;
+  lv_coord_t height;
+};
+
+// These transparent zones enlarge the navigation hit targets without changing
+// the visual button layout. The coordinates are in the 240 x 320 screen space.
+constexpr TouchZone kTabTouchZones[] = {
+    {FactoryPage::Home, 2, 252, 58, 67},
+    {FactoryPage::Io, 68, 252, 48, 67},
+    {FactoryPage::Wifi, 124, 252, 48, 67},
+    {FactoryPage::Sd, 180, 252, 56, 67},
+};
+
 struct ViewState {
   lv_obj_t* card_pager = nullptr;
   lv_obj_t* indicator_row = nullptr;
   lv_obj_t* indicator_dots[kMaxIndicatorDots] = {};
   lv_obj_t* buttons[kTabCount] = {};
+  lv_obj_t* touch_debug_label = nullptr;
   size_t current_page_count = 0;
   size_t current_page_index = 0;
   FactoryPage active_page = FactoryPage::Home;
+  uint16_t touch_x = 0;
+  uint16_t touch_y = 0;
+  bool touch_pressed = false;
+  bool touch_read_ok = false;
+  bool touch_debug_initialized = false;
 };
 
 ViewState g_view;
@@ -310,7 +334,7 @@ void set_active_page(FactoryPage page) {
 }
 
 void on_button_pressed(lv_event_t* event) {
-  if (lv_event_get_code(event) != LV_EVENT_CLICKED) {
+  if (lv_event_get_code(event) != LV_EVENT_PRESSED) {
     return;
   }
 
@@ -331,6 +355,9 @@ void build_header(lv_obj_t* parent) {
 
   auto* title = make_label(header, "Factory UI");
   theme::apply_header_title(title);
+
+  g_view.touch_debug_label = make_label(header, "T: WAIT");
+  theme::apply_header_meta(g_view.touch_debug_label);
 }
 
 void build_device_card(lv_obj_t* parent) {
@@ -393,14 +420,25 @@ void build_button_grid(lv_obj_t* parent) {
     lv_obj_set_layout(button, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(button, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(button, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_add_event_cb(button, on_button_pressed, LV_EVENT_CLICKED,
-                        reinterpret_cast<void*>(static_cast<uintptr_t>(kTabs[i].page)));
-
     auto* icon = make_label(button, kTabs[i].tab_icon);
     theme::apply_button_icon(icon);
 
     auto* label = make_label(button, kTabs[i].tab_label);
     theme::apply_button_label(label);
+  }
+}
+
+void build_touch_zones(lv_obj_t* screen) {
+  for(const auto& zone : kTabTouchZones) {
+    auto* target = lv_obj_create(screen);
+    lv_obj_remove_style_all(target);
+    lv_obj_add_flag(target, LV_OBJ_FLAG_IGNORE_LAYOUT);
+    lv_obj_add_flag(target, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_remove_flag(target, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_pos(target, zone.x, zone.y);
+    lv_obj_set_size(target, zone.width, zone.height);
+    lv_obj_add_event_cb(target, on_button_pressed, LV_EVENT_PRESSED,
+                        reinterpret_cast<void*>(static_cast<uintptr_t>(zone.page)));
   }
 }
 
@@ -432,8 +470,36 @@ void build() {
 
   build_device_card(content);
   build_button_grid(content);
+  build_touch_zones(screen);
 
   set_active_page(FactoryPage::Home);
+}
+
+void set_touch_debug(uint16_t raw_x, uint16_t raw_y, bool pressed, bool read_ok) {
+  if(g_view.touch_debug_label == nullptr) {
+    return;
+  }
+
+  if(g_view.touch_debug_initialized && g_view.touch_x == raw_x && g_view.touch_y == raw_y &&
+     g_view.touch_pressed == pressed && g_view.touch_read_ok == read_ok) {
+    return;
+  }
+
+  g_view.touch_x = raw_x;
+  g_view.touch_y = raw_y;
+  g_view.touch_pressed = pressed;
+  g_view.touch_read_ok = read_ok;
+  g_view.touch_debug_initialized = true;
+
+  char text[32] = {};
+  if(!read_ok) {
+    std::snprintf(text, sizeof(text), "T: ERR %03u,%03u", raw_x, raw_y);
+  }
+  else {
+    std::snprintf(text, sizeof(text), "T: %s %03u,%03u", pressed ? "DOWN" : "UP", raw_x,
+                  raw_y);
+  }
+  lv_label_set_text(g_view.touch_debug_label, text);
 }
 
 }  // namespace factory_ui

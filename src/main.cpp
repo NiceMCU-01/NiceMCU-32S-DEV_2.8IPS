@@ -30,4 +30,7 @@ void loop() {
   lv_last_tick = now;
 
   lv_timer_handler();
+
+  const auto touch = nicemcu::display::get_touch_debug_info();
+  factory_ui::set_touch_debug(touch.raw_x, touch.raw_y, touch.pressed, touch.read_ok);
 }
